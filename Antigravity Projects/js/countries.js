@@ -1,0 +1,408 @@
+// Base de datos de indicadores macroeconómicos de referencia por país
+// Fuentes de referencia: FMI (WEO), Banco Mundial, Bancos Centrales (2024-2025)
+
+const COUNTRIES_DATABASE = [
+  {
+    id: "ES",
+    name: "España",
+    flag: "🇪🇸",
+    region: "Europa",
+    currency: "EUR (€)",
+    gdp: 1650, // Miles de millones USD
+    gdpGrowth: 2.4, // % anual reciente
+    interestRate: 3.25, // Tasa BCE (%)
+    inflation: 2.3, // % anual
+    unemployment: 11.5, // %
+    debtToGdp: 105.0, // % del PIB
+    fiscalBalance: -3.2, // % del PIB (déficit)
+    currentAccount: 2.5, // % del PIB (superávit exterior)
+    investmentRate: 21.0, // % del PIB
+    potentialGrowth: 1.8, // % crecimiento tendencial
+    population: 48.6, // Millones
+    populationGrowth: 0.8, // % anual
+    targetInflation: 2.0, // Meta BCE
+    neutralRealRate: 1.25 // r* estimado
+  },
+  {
+    id: "MX",
+    name: "México",
+    flag: "🇲🇽",
+    region: "América Latina",
+    currency: "MXN ($)",
+    gdp: 1810,
+    gdpGrowth: 1.6,
+    interestRate: 10.25, // Banxico (%)
+    inflation: 4.5,
+    unemployment: 2.8,
+    debtToGdp: 51.5,
+    fiscalBalance: -4.8,
+    currentAccount: -1.2,
+    investmentRate: 24.5,
+    potentialGrowth: 2.1,
+    population: 130.2,
+    populationGrowth: 0.9,
+    targetInflation: 3.0,
+    neutralRealRate: 2.75
+  },
+  {
+    id: "US",
+    name: "Estados Unidos",
+    flag: "🇺🇸",
+    region: "América del Norte",
+    currency: "USD ($)",
+    gdp: 28780,
+    gdpGrowth: 2.8,
+    interestRate: 4.75, // Fed Funds (%)
+    inflation: 2.6,
+    unemployment: 4.1,
+    debtToGdp: 123.0,
+    fiscalBalance: -6.4,
+    currentAccount: -3.3,
+    investmentRate: 21.2,
+    potentialGrowth: 2.2,
+    population: 341.0,
+    populationGrowth: 0.5,
+    targetInflation: 2.0,
+    neutralRealRate: 1.5
+  },
+  {
+    id: "AR",
+    name: "Argentina",
+    flag: "🇦🇷",
+    region: "América Latina",
+    currency: "ARS ($)",
+    gdp: 640,
+    gdpGrowth: -1.5,
+    interestRate: 35.0, // BCRA (%)
+    inflation: 45.0, // Tasa proyectada post-ajuste
+    unemployment: 7.6,
+    debtToGdp: 85.0,
+    fiscalBalance: 0.5, // Superávit primario de ajuste
+    currentAccount: 1.8,
+    investmentRate: 16.5,
+    potentialGrowth: 2.5,
+    population: 46.7,
+    populationGrowth: 0.9,
+    targetInflation: 8.0,
+    neutralRealRate: 5.0
+  },
+  {
+    id: "CO",
+    name: "Colombia",
+    flag: "🇨🇴",
+    region: "América Latina",
+    currency: "COP ($)",
+    gdp: 395,
+    gdpGrowth: 1.8,
+    interestRate: 9.75, // BanRep (%)
+    inflation: 5.4,
+    unemployment: 9.2,
+    debtToGdp: 54.0,
+    fiscalBalance: -4.5,
+    currentAccount: -2.8,
+    investmentRate: 18.0,
+    potentialGrowth: 2.8,
+    population: 52.6,
+    populationGrowth: 1.0,
+    targetInflation: 3.0,
+    neutralRealRate: 2.8
+  },
+  {
+    id: "CL",
+    name: "Chile",
+    flag: "🇨🇱",
+    region: "América Latina",
+    currency: "CLP ($)",
+    gdp: 345,
+    gdpGrowth: 2.3,
+    interestRate: 5.25, // Banco Central de Chile
+    inflation: 4.1,
+    unemployment: 8.5,
+    debtToGdp: 40.5,
+    fiscalBalance: -2.3,
+    currentAccount: -3.5,
+    investmentRate: 23.0,
+    potentialGrowth: 2.3,
+    population: 19.9,
+    populationGrowth: 0.6,
+    targetInflation: 3.0,
+    neutralRealRate: 2.0
+  },
+  {
+    id: "PE",
+    name: "Perú",
+    flag: "🇵🇪",
+    region: "América Latina",
+    currency: "PEN (S/)",
+    gdp: 280,
+    gdpGrowth: 3.1,
+    interestRate: 5.0, // BCRP
+    inflation: 2.0,
+    unemployment: 6.2,
+    debtToGdp: 33.0,
+    fiscalBalance: -3.2,
+    currentAccount: 1.2,
+    investmentRate: 22.5,
+    potentialGrowth: 2.9,
+    population: 34.2,
+    populationGrowth: 1.1,
+    targetInflation: 2.0,
+    neutralRealRate: 2.0
+  },
+  {
+    id: "BR",
+    name: "Brasil",
+    flag: "🇧🇷",
+    region: "América Latina",
+    currency: "BRL (R$)",
+    gdp: 2330,
+    gdpGrowth: 3.0,
+    interestRate: 11.25, // Selic (%)
+    inflation: 4.4,
+    unemployment: 6.8,
+    debtToGdp: 78.5,
+    fiscalBalance: -7.5,
+    currentAccount: -2.0,
+    investmentRate: 17.5,
+    potentialGrowth: 2.0,
+    population: 216.0,
+    populationGrowth: 0.5,
+    targetInflation: 3.0,
+    neutralRealRate: 4.5
+  },
+  {
+    id: "DE",
+    name: "Alemania",
+    flag: "🇩🇪",
+    region: "Europa",
+    currency: "EUR (€)",
+    gdp: 4590,
+    gdpGrowth: 0.2,
+    interestRate: 3.25, // BCE
+    inflation: 2.1,
+    unemployment: 6.0,
+    debtToGdp: 63.5,
+    fiscalBalance: -1.8,
+    currentAccount: 6.2,
+    investmentRate: 21.8,
+    potentialGrowth: 1.0,
+    population: 84.4,
+    populationGrowth: 0.1,
+    targetInflation: 2.0,
+    neutralRealRate: 1.0
+  },
+  {
+    id: "FR",
+    name: "Francia",
+    flag: "🇫🇷",
+    region: "Europa",
+    currency: "EUR (€)",
+    gdp: 3130,
+    gdpGrowth: 1.1,
+    interestRate: 3.25, // BCE
+    inflation: 1.6,
+    unemployment: 7.4,
+    debtToGdp: 112.0,
+    fiscalBalance: -5.5,
+    currentAccount: -0.7,
+    investmentRate: 24.5,
+    potentialGrowth: 1.3,
+    population: 68.2,
+    populationGrowth: 0.3,
+    targetInflation: 2.0,
+    neutralRealRate: 1.0
+  },
+  {
+    id: "GB",
+    name: "Reino Unido",
+    flag: "🇬🇧",
+    region: "Europa",
+    currency: "GBP (£)",
+    gdp: 3500,
+    gdpGrowth: 1.2,
+    interestRate: 4.75, // BoE
+    inflation: 2.3,
+    unemployment: 4.3,
+    debtToGdp: 101.0,
+    fiscalBalance: -4.4,
+    currentAccount: -3.0,
+    investmentRate: 18.2,
+    potentialGrowth: 1.5,
+    population: 67.8,
+    populationGrowth: 0.4,
+    targetInflation: 2.0,
+    neutralRealRate: 1.5
+  },
+  {
+    id: "JP",
+    name: "Japón",
+    flag: "🇯🇵",
+    region: "Asia-Pacífico",
+    currency: "JPY (¥)",
+    gdp: 4110,
+    gdpGrowth: 0.7,
+    interestRate: 0.5, // BoJ
+    inflation: 2.5,
+    unemployment: 2.5,
+    debtToGdp: 255.0,
+    fiscalBalance: -4.9,
+    currentAccount: 3.6,
+    investmentRate: 26.0,
+    potentialGrowth: 0.6,
+    population: 124.5,
+    populationGrowth: -0.5,
+    targetInflation: 2.0,
+    neutralRealRate: 0.0
+  },
+  {
+    id: "CN",
+    name: "China",
+    flag: "🇨🇳",
+    region: "Asia-Pacífico",
+    currency: "CNY (¥)",
+    gdp: 18530,
+    gdpGrowth: 4.8,
+    interestRate: 3.1, // PBOC LPR
+    inflation: 0.4,
+    unemployment: 5.1,
+    debtToGdp: 83.0,
+    fiscalBalance: -7.1,
+    currentAccount: 1.5,
+    investmentRate: 42.0,
+    potentialGrowth: 4.2,
+    population: 1410.0,
+    populationGrowth: -0.1,
+    targetInflation: 2.5,
+    neutralRealRate: 2.0
+  },
+  {
+    id: "IN",
+    name: "India",
+    flag: "🇮🇳",
+    region: "Asia-Pacífico",
+    currency: "INR (₹)",
+    gdp: 3940,
+    gdpGrowth: 6.8,
+    interestRate: 6.5, // RBI
+    inflation: 4.8,
+    unemployment: 7.1,
+    debtToGdp: 82.5,
+    fiscalBalance: -5.4,
+    currentAccount: -1.3,
+    investmentRate: 31.0,
+    potentialGrowth: 6.5,
+    population: 1430.0,
+    populationGrowth: 0.8,
+    targetInflation: 4.0,
+    neutralRealRate: 2.5
+  },
+  {
+    id: "IT",
+    name: "Italia",
+    flag: "🇮🇹",
+    region: "Europa",
+    currency: "EUR (€)",
+    gdp: 2330,
+    gdpGrowth: 0.8,
+    interestRate: 3.25, // BCE
+    inflation: 1.2,
+    unemployment: 6.2,
+    debtToGdp: 139.0,
+    fiscalBalance: -4.3,
+    currentAccount: 0.9,
+    investmentRate: 21.0,
+    potentialGrowth: 0.7,
+    population: 58.9,
+    populationGrowth: -0.3,
+    targetInflation: 2.0,
+    neutralRealRate: 1.0
+  },
+  {
+    id: "CA",
+    name: "Canadá",
+    flag: "🇨🇦",
+    region: "América del Norte",
+    currency: "CAD ($)",
+    gdp: 2240,
+    gdpGrowth: 1.3,
+    interestRate: 3.75, // BoC
+    inflation: 2.0,
+    unemployment: 6.5,
+    debtToGdp: 106.0,
+    fiscalBalance: -2.1,
+    currentAccount: -0.6,
+    investmentRate: 22.0,
+    potentialGrowth: 1.7,
+    population: 40.5,
+    populationGrowth: 2.3,
+    targetInflation: 2.0,
+    neutralRealRate: 1.5
+  },
+  {
+    id: "AU",
+    name: "Australia",
+    flag: "🇦🇺",
+    region: "Oceanía",
+    currency: "AUD ($)",
+    gdp: 1720,
+    gdpGrowth: 1.5,
+    interestRate: 4.35, // RBA
+    inflation: 2.8,
+    unemployment: 4.1,
+    debtToGdp: 50.0,
+    fiscalBalance: -0.5,
+    currentAccount: 0.8,
+    investmentRate: 23.5,
+    potentialGrowth: 2.1,
+    population: 26.8,
+    populationGrowth: 1.5,
+    targetInflation: 2.5,
+    neutralRealRate: 1.8
+  },
+  {
+    id: "UY",
+    name: "Uruguay",
+    flag: "🇺🇾",
+    region: "América Latina",
+    currency: "UYU ($)",
+    gdp: 80,
+    gdpGrowth: 3.2,
+    interestRate: 8.5, // BCU
+    inflation: 4.8,
+    unemployment: 7.9,
+    debtToGdp: 61.0,
+    fiscalBalance: -3.3,
+    currentAccount: -2.9,
+    investmentRate: 19.5,
+    potentialGrowth: 2.4,
+    population: 3.4,
+    populationGrowth: 0.3,
+    targetInflation: 4.5,
+    neutralRealRate: 2.5
+  },
+  {
+    id: "CUSTOM",
+    name: "País Personalizado",
+    flag: "🌐",
+    region: "Escenario Libre",
+    currency: "USD ($)",
+    gdp: 1000,
+    gdpGrowth: 2.5,
+    interestRate: 5.0,
+    inflation: 3.5,
+    unemployment: 5.5,
+    debtToGdp: 60.0,
+    fiscalBalance: -3.0,
+    currentAccount: 0.0,
+    investmentRate: 22.0,
+    potentialGrowth: 2.5,
+    population: 50.0,
+    populationGrowth: 0.8,
+    targetInflation: 2.5,
+    neutralRealRate: 2.0
+  }
+];
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = COUNTRIES_DATABASE;
+}

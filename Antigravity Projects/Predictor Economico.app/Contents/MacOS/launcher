@@ -1,0 +1,10 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd )"
+cd "$DIR"
+
+# Intentar abrir con el navegador la versión web completa o el servidor
+if which python3 >/dev/null 2>&1; then
+    python3 "$DIR/main.py" --web &
+else
+    open "$DIR/index.html"
+fi

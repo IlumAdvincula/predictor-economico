@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictor Macroeconómico Global | Simulación de Economías</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Estilos personalizados -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
+
+  <!-- BARRA SUPERIOR / NAVEGACIÓN -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Logo y Título -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Predictor Macroeconómico
+            <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 font-medium">Proyección Cuantitativa</span>
+          </h1>
+          <p class="text-xs text-slate-400">Modelo Integrado: Regla de Taylor • Ecuación de Domar • Curva de Phillips • Solow-Swan</p>
+        </div>
+      </div>
+
+      <!-- Controles Rápidos de Cabecera -->
+      <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+        
+        <!-- Selector de País Principal -->
+        <div class="relative min-w-[200px]">
+          <select id="countrySelect" class="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none font-medium cursor-pointer shadow-sm">
+            <!-- Rellenado dinámicamente con países -->
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+
+        <!-- Selector de Escenario de Shocks -->
+        <div class="relative min-w-[170px]">
+          <select id="scenarioSelect" class="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 text-white text-sm rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none font-medium cursor-pointer shadow-sm">
+            <option value="base">⚖️ Escenario Base</option>
+            <option value="optimistic">🚀 Boom / Vientos a Favor</option>
+            <option value="pessimistic">📉 Recesión Global</option>
+            <option value="stagflation">⚡ Shock de Estanflación</option>
+            <option value="fiscal_austerity">🛡️ Austeridad y Ajuste Fiscal</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+
+        <!-- Selector de Horizonte Temporal -->
+        <div class="relative w-28">
+          <select id="horizonSelect" class="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 text-white text-sm rounded-lg px-3 py-2 pr-7 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none font-medium cursor-pointer shadow-sm">
+            <option value="3">3 Años</option>
+            <option value="5" selected>5 Años</option>
+            <option value="10">10 Años</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex items-center gap-1.5 no-print">
+          <button id="btnSaveBaseline" title="Fijar este escenario como base para comparar cambios" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1.5 text-xs font-semibold">
+            <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+            <span class="hidden xl:inline">Fijar Base</span>
+          </button>
+          
+          <button id="btnExportCsv" title="Exportar predicciones a archivo CSV" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1.5 text-xs font-semibold">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <span class="hidden xl:inline">CSV</span>
+          </button>
+
+          <button id="btnPrint" title="Imprimir informe o guardar como PDF" class="p-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold transition flex items-center gap-1.5 text-xs shadow-md shadow-sky-600/30">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            <span>Informe PDF</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- BANNER DE COMPARACIÓN ACTIVA (OCULTO POR DEFECTO) -->
+  <div id="comparisonBanner" class="hidden bg-sky-950/60 border-b border-sky-800/40 px-4 py-2 text-xs text-sky-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+        <span>Modo Comparación activo vs: <strong id="savedBaselineName" class="text-white">Escenario Anterior</strong></span>
+      </div>
+      <button id="btnClearBaseline" class="text-sky-300 hover:text-white underline font-semibold">Desactivar Comparación</button>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL EN GRID -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ========================================== -->
+      <!-- COLUMNA IZQUIERDA: PANEL DE VARIABLES (4 COLS) -->
+      <!-- ========================================== -->
+      <aside class="lg:col-span-4 space-y-5 no-print">
+        
+        <!-- Tarjeta de Identidad del País -->
+        <div class="glass-panel rounded-2xl p-5 border border-slate-800 relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-sky-500/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-semibold tracking-wider text-sky-400 uppercase">País Seleccionado</span>
+              <h2 id="activeCountryLabel" class="text-2xl font-bold text-white mt-0.5">🇪🇸 España</h2>
+              <p id="activeCountryRegion" class="text-xs text-slate-400 mt-0.5">Europa • Moneda: EUR (€)</p>
+            </div>
+            <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60 text-slate-300">
+              <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800/80">
+            Ajusta cualquier variable para simular el impacto en tiempo real sobre el crecimiento, la inflación y la solvencia fiscal.
+          </p>
+        </div>
+
+        <!-- Panel de Parámetros Económicos -->
+        <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+              Variables Macroeconómicas Clave
+            </h3>
+            <span class="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Tiempo Real</span>
+          </div>
+
+          <!-- 1. PIB Actual -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <label for="gdp" class="font-medium text-slate-300">PIB Actual ($ Miles de Millones USD)</label>
+              <div class="flex items-center gap-1">
+                <span class="text-slate-400">$</span>
+                <input type="number" id="gdp" step="1" min="1" max="50000" class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">B</span>
+              </div>
+            </div>
+            <input type="range" id="gdpRange" min="10" max="30000" step="10" class="w-full">
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>$10 B</span>
+              <span>$15,000 B</span>
+              <span>$30,000 B</span>
+            </div>
+          </div>
+
+          <!-- 2. Tasa de Interés de Política Monetaria -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
+            <div class="flex justify-between items-center text-xs">
+              <label for="interestRate" class="font-medium text-slate-300 flex items-center gap-1">
+                Tasa de Interés Anual (%)
+                <span title="Tasa de referencia del Banco Central (Tasa de política monetaria)" class="text-slate-500 cursor-help">ℹ️</span>
+              </label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="interestRate" step="0.25" min="0" max="100" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <input type="range" id="interestRateRange" min="0" max="40" step="0.25" class="w-full">
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>0% (Ultra-expansiva)</span>
+              <span>10%</span>
+              <span>40% (Hiper-contractiva)</span>
+            </div>
+          </div>
+
+          <!-- 3. Tasa de Inflación Anual -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
+            <div class="flex justify-between items-center text-xs">
+              <label for="inflation" class="font-medium text-slate-300">Inflación Anual Actual (%)</label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="inflation" step="0.1" min="-5" max="150" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <input type="range" id="inflationRange" min="0" max="30" step="0.1" class="w-full">
+          </div>
+
+          <!-- 4. Crecimiento del PIB Real Reciente -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
+            <div class="flex justify-between items-center text-xs">
+              <label for="gdpGrowth" class="font-medium text-slate-300">Crecimiento PIB Actual (%)</label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="gdpGrowth" step="0.1" min="-15" max="25" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <input type="range" id="gdpGrowthRange" min="-5" max="10" step="0.1" class="w-full">
+          </div>
+
+          <!-- 5. Tasa de Desempleo -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
+            <div class="flex justify-between items-center text-xs">
+              <label for="unemployment" class="font-medium text-slate-300">Tasa de Desempleo (%)</label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="unemployment" step="0.1" min="1" max="40" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <input type="range" id="unemploymentRange" min="1" max="25" step="0.1" class="w-full">
+          </div>
+
+          <!-- 6. Deuda Pública sobre PIB -->
+          <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
+            <div class="flex justify-between items-center text-xs">
+              <label for="debtToGdp" class="font-medium text-slate-300">Deuda Pública (% del PIB)</label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="debtToGdp" step="0.5" min="5" max="300" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-right font-mono text-white text-xs focus:ring-1 focus:ring-sky-500">
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <input type="range" id="debtToGdpRange" min="10" max="200" step="1" class="w-full">
+          </div>
+
+          <!-- Parámetros Estructurales Desplegables -->
+          <details class="pt-2 border-t border-slate-800/80 group">
+            <summary class="text-xs font-semibold text-sky-400 cursor-pointer hover:text-sky-300 transition flex items-center justify-between list-none py-1">
+              <span>⚙️ Parámetros Fiscales y Estructurales</span>
+              <span class="group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            
+            <div class="space-y-4 pt-3 text-xs">
+              <!-- Balance Fiscal -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Balance Fiscal Primario (% PIB):</span>
+                  <input type="number" id="fiscalBalance" step="0.1" min="-20" max="15" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="fiscalBalanceRange" min="-10" max="5" step="0.1" class="w-full">
+              </div>
+
+              <!-- Cuenta Corriente -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Balanza por Cuenta Corriente (% PIB):</span>
+                  <input type="number" id="currentAccount" step="0.1" min="-15" max="15" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="currentAccountRange" min="-8" max="8" step="0.2" class="w-full">
+              </div>
+
+              <!-- Inversión Fija -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Tasa de Inversión Bruta (% PIB):</span>
+                  <input type="number" id="investmentRate" step="0.5" min="5" max="50" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="investmentRateRange" min="10" max="45" step="0.5" class="w-full">
+              </div>
+
+              <!-- Crecimiento Potencial -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Crecimiento Potencial Tendencial (%):</span>
+                  <input type="number" id="potentialGrowth" step="0.1" min="0" max="10" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="potentialGrowthRange" min="0.5" max="7" step="0.1" class="w-full">
+              </div>
+
+              <!-- Meta de Inflación -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Meta Inflación Banco Central (%):</span>
+                  <input type="number" id="targetInflation" step="0.1" min="0" max="15" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="targetInflationRange" min="1" max="6" step="0.2" class="w-full">
+              </div>
+
+              <!-- Tasa Real Neutral (r*) -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Tasa Real Neutral Estimada r* (%):</span>
+                  <input type="number" id="neutralRealRate" step="0.1" min="-2" max="10" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="neutralRealRateRange" min="-1" max="6" step="0.2" class="w-full">
+              </div>
+
+              <!-- Crecimiento Poblacional -->
+              <div class="space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">Crecimiento Poblacional (% anual):</span>
+                  <input type="number" id="populationGrowth" step="0.1" min="-2" max="5" class="w-16 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-right font-mono text-xs">
+                </div>
+                <input type="range" id="populationGrowthRange" min="-1" max="3" step="0.1" class="w-full">
+              </div>
+
+            </div>
+          </details>
+
+        </div>
+
+        <!-- Indicador de Postura Monetaria Instantánea -->
+        <div class="glass-panel-subtle rounded-xl p-4 border border-slate-800 text-xs space-y-1.5">
+          <div class="font-bold text-slate-300 flex items-center justify-between">
+            <span>Diagnóstico de Tasa de Interés</span>
+            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+          </div>
+          <p class="text-slate-400 leading-relaxed text-[11px]">
+            La política monetaria se evalúa por la <strong class="text-sky-300">tasa real (Interés − Inflación)</strong> comparada con la <strong class="text-sky-300">tasa neutral (r*)</strong>. Tasas reales altas enfrían la inflación pero frenan el PIB.
+          </p>
+        </div>
+
+      </aside>
+
+      <!-- ========================================== -->
+      <!-- COLUMNA DERECHA: DASHBOARD DE RESULTADOS (8 COLS) -->
+      <!-- ========================================== -->
+      <section class="lg:col-span-8 space-y-6">
+
+        <!-- RESUMEN DE INDICADORES CLAVE (KPIs CARDS) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          
+          <!-- KPI 1: Crecimiento Acumulado -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Crecimiento Acumulado</span>
+            <div id="kpiCumulativeGdp" class="text-2xl font-bold text-emerald-400 mt-1">+11.8%</div>
+            <div id="kpiFinalGdp" class="text-[11px] text-slate-400 mt-0.5">$1,845 B USD</div>
+          </div>
+
+          <!-- KPI 2: Inflación Final Proyectada -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Inflación Proyectada</span>
+            <div id="kpiFinalInflation" class="text-2xl font-bold text-slate-200 mt-1">2.1%</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Al final del período</div>
+          </div>
+
+          <!-- KPI 3: Deuda / PIB Final -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Deuda Pública / PIB</span>
+            <div id="kpiFinalDebt" class="text-2xl font-bold text-slate-200 mt-1">102.4%</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Trayectoria Domar</div>
+          </div>
+
+          <!-- KPI 4: Tasa de Interés Terminal -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Tasa Interés Terminal</span>
+            <div id="kpiFinalRate" class="text-2xl font-bold text-slate-200 mt-1">3.1%</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Regla de Taylor</div>
+          </div>
+
+          <!-- KPI 5: Rating de Riesgo Soberano -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Calificación Crediticia</span>
+            <div id="kpiRiskRating" class="text-2xl font-bold text-emerald-400 mt-1">A</div>
+            <div id="kpiRiskSpread" class="text-[11px] text-slate-400 mt-0.5">Spread: +115 p.b.</div>
+          </div>
+
+          <!-- KPI 6: Probabilidad de Recesión -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Riesgo Recesión 24M</span>
+            <div id="kpiRecessionProb" class="text-2xl font-bold text-emerald-400 mt-1">18%</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Probabilidad cíclica</div>
+          </div>
+
+          <!-- KPI 7: Índice de Estanflación -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 glow-card">
+            <span class="text-[11px] font-medium text-slate-400 block">Índice Estanflación</span>
+            <div id="kpiStagflation" class="text-2xl font-bold text-emerald-400 mt-1">24/100</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">0 = Nulo, 100 = Severo</div>
+          </div>
+
+          <!-- KPI 8: Semáforo de Salud -->
+          <div class="glass-panel rounded-xl p-4 border border-slate-800 flex flex-col justify-between glow-card">
+            <span class="text-[11px] font-medium text-slate-400">Diagnóstico Global</span>
+            <div class="mt-1">
+              <span id="healthStatusBadge" class="px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                Estable
+              </span>
+            </div>
+            <span class="text-[10px] text-slate-400 mt-1">Consistencia macro</span>
+          </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- GRÁFICOS ANALÍTICOS (CHART.JS) -->
+        <!-- ========================================== -->
+
+        <!-- GRÁFICO 1: CONO DE INCERTIDUMBRE Y PROYECCIÓN DEL PIB -->
+        <div class="glass-panel rounded-2xl p-5 border border-slate-800">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                Proyección del PIB y Cono de Incertidumbre (Monte Carlo)
+              </h3>
+              <p class="text-xs text-slate-400">Proyección esperada con intervalo de confianza del 80% (Percentiles P10 y P90, 500 iteraciones estocásticas)</p>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="gdpChart"></canvas>
+          </div>
+        </div>
+
+        <!-- FILA DE DOS GRÁFICOS: CRECIMIENTO & INFLACIÓN/TASAS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- GRÁFICO 2: Crecimiento PIB Real vs Brecha de Producto -->
+          <div class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="pb-3 mb-3 border-b border-slate-800">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Crecimiento Real vs Brecha de Producto
+              </h3>
+              <p class="text-[11px] text-slate-400">Tasa de crecimiento (%) y Output Gap cíclico</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="growthGapChart"></canvas>
+            </div>
+          </div>
+
+          <!-- GRÁFICO 3: Inflación vs Tasa de Interés (Dilema del Banco Central) -->
+          <div class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="pb-3 mb-3 border-b border-slate-800">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Inflación vs Tasas de Interés
+              </h3>
+              <p class="text-[11px] text-slate-400">Inflación, Tasa Nominal y Tasa Real ex-post</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="inflationRatesChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FILA DE DOS GRÁFICOS: DEUDA PÚBLICA & DESEMPLEO -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- GRÁFICO 4: Dinámica de la Deuda Pública (% PIB) -->
+          <div class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="pb-3 mb-3 border-b border-slate-800">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Sostenibilidad de la Deuda Pública
+              </h3>
+              <p class="text-[11px] text-slate-400">Ratio Deuda/PIB (%) y Balance Fiscal primario</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="debtChart"></canvas>
+            </div>
+          </div>
+
+          <!-- GRÁFICO 5: Curva de Okun y Desempleo -->
+          <div class="glass-panel rounded-2xl p-5 border border-slate-800">
+            <div class="pb-3 mb-3 border-b border-slate-800">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Evolución del Desempleo (Ley de Okun)
+              </h3>
+              <p class="text-[11px] text-slate-400">Respuesta del mercado laboral al ciclo económico</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="unemploymentChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- INFORME DE DIAGNÓSTICO EJECUTIVO (AI / QUANT) -->
+        <!-- ========================================== -->
+        <div class="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-sm">
+                AI
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white">Informe Ejecutivo de Diagnóstico Económico</h3>
+                <p id="scenarioDescription" class="text-xs text-sky-400">Escenario de referencia sin perturbaciones extraordinarias</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+            <!-- Diagnóstico Monetario -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="font-bold text-sky-400 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Postura Monetaria y Transmisión de Tasas
+              </div>
+              <p id="monetaryDiagnosisText" class="leading-relaxed text-slate-300">
+                Calculando análisis de política monetaria...
+              </p>
+            </div>
+
+            <!-- Diagnóstico Fiscal -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="font-bold text-amber-400 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Sostenibilidad Fiscal y Deuda Soberana
+              </div>
+              <p id="fiscalDiagnosisText" class="leading-relaxed text-slate-300">
+                Calculando solvencia de deuda y efecto bola de nieve...
+              </p>
+            </div>
+          </div>
+
+          <!-- Recomendaciones de Política Económica -->
+          <div class="pt-2">
+            <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-2">Recomendaciones Estratégicas de Política Macroeconómica:</h4>
+            <ul id="recommendationsList" class="space-y-1.5">
+              <!-- Rellenado dinámicamente -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TABLA DETALLADA DE DATOS AÑO POR AÑO -->
+        <!-- ========================================== -->
+        <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              Tabla de Proyección Temporal Año a Año
+            </h3>
+            <span class="text-xs text-slate-400">Datos cuantitativos</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px] bg-slate-900/70">
+                  <th class="px-4 py-2.5">Año</th>
+                  <th class="px-4 py-2.5 text-right">PIB Nominal</th>
+                  <th class="px-4 py-2.5 text-right">Crecimiento</th>
+                  <th class="px-4 py-2.5 text-right">Inflación</th>
+                  <th class="px-4 py-2.5 text-right">Tasa Nominal</th>
+                  <th class="px-4 py-2.5 text-right">Tasa Real</th>
+                  <th class="px-4 py-2.5 text-right">Desempleo</th>
+                  <th class="px-4 py-2.5 text-right">Deuda / PIB</th>
+                  <th class="px-4 py-2.5 text-right">Bal. Fiscal</th>
+                </tr>
+              </thead>
+              <tbody id="projectionTableBody" class="divide-y divide-slate-800/60">
+                <!-- Rellenado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- FUNDAMENTOS TEÓRICOS Y METODOLOGÍA -->
+        <!-- ========================================== -->
+        <div class="glass-panel-subtle rounded-2xl p-5 border border-slate-800/80 text-xs text-slate-400 space-y-3">
+          <h4 class="font-bold text-slate-300 text-sm flex items-center gap-2">
+            <span>📚 Fundamentos Teóricos del Modelo de Predicción</span>
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] leading-relaxed">
+            <div>
+              <strong class="text-slate-200">1. Regla de Taylor (Política Monetaria):</strong> Modela la reacción de los tipos de interés según la desviación de la inflación respecto a la meta y la brecha del producto ($i_t = r^* + \pi_t + 0.5(\pi - \pi^*) + 0.5 \text{Output Gap}$).
+            </div>
+            <div>
+              <strong class="text-slate-200">2. Ecuación de Domar (Sostenibilidad de Deuda):</strong> Rige la trayectoria del ratio Deuda/PIB en función del diferencial entre tipo de interés nominal y crecimiento económico nominal ($r - g$), sumado al déficit primario.
+            </div>
+            <div>
+              <strong class="text-slate-200">3. Curva de Phillips con Expectativas:</strong> Conecta la inflación esperada con la holgura en el mercado de bienes y factores (brecha del producto).
+            </div>
+            <div>
+              <strong class="text-slate-200">4. Ley de Okun y Solow-Swan:</strong> Traduce las fluctuaciones del PIB respecto al potencial en absorción o destrucción de puestos de trabajo e inversión de capital.
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- PIE DE PÁGINA -->
+  <footer class="border-t border-slate-800/80 mt-12 py-6 text-center text-xs text-slate-500 no-print">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>Simulador Macroeconómico Cuantitativo • Desarrollado para análisis económico y evaluación de políticas públicas</p>
+      <div class="flex items-center space-x-4">
+        <span>Datos: FMI, Banco Mundial, Bancos Centrales</span>
+        <span>•</span>
+        <span>Exportable a PDF y CSV</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts del Sistema -->
+  <script src="js/countries.js"></script>
+  <script src="js/macro_model.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
